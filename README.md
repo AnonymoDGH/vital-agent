@@ -153,9 +153,9 @@ muertes** (ni todo fácil ni todo imposible).
 Distribución medida sobre 40 semillas (1500 ticks máx.):
 
 ```
-wins=31  deaths=8  still_alive=1
-win ticks   min/avg/max: 137 / 447 / 792
-death ticks min/avg/max: 910 / 944 / 1006
+wins=33  deaths=7  still_alive=0
+win ticks   min/avg/max: 394 / 486 / 609
+death ticks min/avg/max: 772 / 785 / 803
 ```
 
 ---
