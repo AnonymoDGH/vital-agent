@@ -90,3 +90,23 @@ Todo lo siguiente se ejecutó y comprobó a mano (no solo se escribió).
 Un subagente re-ejecutó todo desde cero: **8/8 PASS** (tests, headless, camino de
 muerte, distribución gana/pierde, TUI, overlays, persistencia CLI, estado git).
 
+## 15. Revisión de código (subagente) y correcciones
+Un segundo subagente hizo una revisión de código línea a línea. No halló bugs
+críticos, pero sí 6 menores (M1–M6) y varios tests débiles. **Todos corregidos y
+verificados con tests de regresión** (`tests/test_regressions.py`):
+
+| ID | Bug | Fix | Verificado |
+|----|-----|-----|-----------|
+| M1 | Al cargar, `passive_income`/`burn` se leían tal cual (ingresos fantasma si el save era antiguo) | `_apply_upgrades()` al cargar | ✅ test |
+| M2 | El log de actividad se congelaba al llegar al cap de 400 líneas | Contador monotónico `log_total` | ✅ test |
+| M3 | El filtro de energía del cerebro no coincidía con el umbral `_energy_for` | Ambos usan el mismo umbral | ✅ test |
+| M4 | Un save con campos de más/de menos se descartaba en silencio | Se tolera el drift de esquema y se avisa | ✅ test |
+| M5 | Un `active_task` obsoleto provocaba `KeyError` | Se limpia al cargar + guardas en la TUI | ✅ test |
+| M6 | El ingreso de eventos no llegaba a `rep.income`/historial | El delta de créditos del evento se contabiliza | ✅ test |
+
+Además se reforzaron tests tautológicos (descanso, cerebro en emergencia, burn) y
+se re-balanceó la economía (`burn 2.5`, `inflación 130`) para mantener el riesgo
+real de muerte tras el fix M3: **33 victorias / 7 muertes** sobre 40 semillas.
+
+Suite final: **39 tests pasando**.
+
