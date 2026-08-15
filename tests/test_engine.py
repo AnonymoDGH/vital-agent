@@ -94,7 +94,9 @@ def test_working_earns_credits():
     before = e.agent.credits
     e.run(3)
     assert e.agent.tasks_done >= 1
-    assert e.agent.total_earned > 0
+    # Each completed micro task must pay a meaningful reward (base 8₵ scaled by
+    # market/mood, possibly halved by risk). A broken ~0₵ reward would fail this.
+    assert e.agent.total_earned >= e.agent.tasks_done * 2.0
 
 
 def test_task_progress_completes_after_duration():
