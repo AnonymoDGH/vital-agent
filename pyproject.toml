@@ -4,26 +4,36 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vital-agent"
-version = "0.1.0"
-description = "VITAL: an autonomous agent that knows its remaining life-credit and must earn its own money — or die."
+version = "0.2.0"
+description = "VITAL: an autonomous agent that knows its remaining life-credit and must earn its own money — or die. Now with a REAL economy: real LLM costs, an on-chain USDC wallet (Coinbase CDP), x402 paid services and real bounties."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "VITAL Project" }]
-keywords = ["agent", "simulation", "tui", "autonomy", "economy", "textual"]
+keywords = ["agent", "simulation", "tui", "autonomy", "economy", "textual", "x402", "usdc", "onchain"]
 dependencies = [
     "textual>=0.70",
     "rich>=13.0",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+# Everything needed for the REAL economy (real wallet, x402 service, LLM brain).
+real = [
+    "cdp-sdk>=1.31",          # Coinbase CDP real wallet (USDC on Base)
+    "x402>=2.19",             # x402 pay-per-request protocol
+    "fastapi>=0.110",         # the paid service
+    "uvicorn>=0.29",          # ASGI server
+    "openai>=1.30",           # real LLM brain (OpenAI)
+    "anthropic>=0.30",        # real LLM brain (Anthropic)
+]
 
 [project.scripts]
 vital = "vital.cli:main"
 
 [tool.setuptools]
-packages = ["vital", "vital.core", "vital.tui"]
+packages = ["vital", "vital.core", "vital.tui", "vital.real"]
 
 [tool.setuptools.package-data]
 vital = ["py.typed"]

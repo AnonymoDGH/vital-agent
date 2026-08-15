@@ -78,6 +78,184 @@ def _cmd_tui() -> int:
     return 0
 
 
+def _cmd_real(cycles: int) -> int:
+    """Run the REAL-economy agent (earn real money to pay real costs)."""
+    from vital.real.agent import RealAgent
+    from vital.real.config import load_real_config
+
+    cfg = load_real_config()
+    problems = cfg.validate()
+    if problems:
+        print("⚠️  Configuración incompleta para modo REAL:")
+        for p in problems:
+            print(f"   - {p}")
+        print("   Ejecutando en modo DEMO (sin dinero real).")
+        cfg.mode = "demo"
+
+    try:
+        agent = RealAgent(cfg)
+    except RuntimeError as exc:
+        print(f"❌ No se pudo iniciar el agente real: {exc}")
+        return 1
+
+    mode = "REAL 💸" if cfg.is_real else "DEMO (simulado)"
+    print("=" * 62)
+    print(f" VITAL — economía {mode}")
+    print(f"   Wallet : {agent.wallet.address()}")
+    print(f"   Saldo  : ${agent.ledger.balance:.6f}")
+    print(f"   Ingresos: {[p.name for p in agent.providers]}")
+    print("=" * 62)
+
+    reports = agent.run(cycles)
+    for rep in reports[-12:]:
+        line = f"  c{rep.cycle:>3}  pensar ${rep.think_cost:.6f}  "
+        if rep.earned > 0:
+            line += f"ganado ${rep.earned:.6f}  "
+        line += f"saldo ${rep.balance_after:.6f}  runway {rep.runway_actions:.0f}"
+        if rep.died:
+            line += "  💀"
+        print(line)
+
+    print("-" * 62)
+    s = agent.status()
+    print(f"  Estado      : {'💀 MUERTO' if s['dead'] else 'vivo'}")
+    if s["dead"]:
+        print(f"  Causa       : {s['death_reason']}")
+    print(f"  Saldo       : ${s['balance']:.6f}")
+    print(f"  Ingresos    : ${s['total_income']:.6f}")
+    print(f"  Gastos      : ${s['total_expense']:.6f}")
+    print(f"  Neto        : ${s['net']:.6f}")
+    print(f"  Coste/pensar: ${s['avg_cost_per_thought']:.6f}")
+    print(f"  Runway      : {s['runway_thoughts']:.0f} pensamientos")
+    print("=" * 62)
+    return 0 if not s["dead"] else 1
+
+
+def _cmd_real_tui() -> int:
+    from vital.tui.real_app import RealApp
+
+    app = RealApp()
+    app.run()
+    return 0
+
+
+def _cmd_wallet() -> int:
+    """Show the agent's wallet (demo or real)."""
+    from vital.real.config import load_real_config
+    from vital.real.wallet import make_wallet
+
+    cfg = load_real_config()
+    try:
+        wallet = make_wallet(cfg)
+    except RuntimeError as exc:
+        print(f"❌ No se pudo crear la wallet real: {exc}")
+        print("   (En modo demo no se necesita; usa VITAL_MODE=real + credenciales CDP)")
+        return 1
+    kind = "REAL on-chain" if wallet.is_real else "DEMO (simulada)"
+    print("=" * 62)
+    print(f" VITAL wallet — {kind}")
+    print(f"   Dirección : {wallet.address()}")
+    print(f"   Saldo     : ${wallet.balance():.6f}")
+    print("=" * 62)
+    if not wallet.is_real:
+        print("   Para una wallet REAL: pon VITAL_MODE=real y las credenciales CDP")
+        print("   (CDP_API_KEY_ID, CDP_API_KEY_SECRET, CDP_WALLET_SECRET).")
+        print("   Docs: docs/REAL_MODE.md")
+    return 0
+
+
+def _cmd_bounties(agent_only: bool) -> int:
+    """List real bounties the agent could work (Superteam Earn)."""
+    from vital.real.bounties import SuperteamProvider
+
+    demo = not _env_real()
+    provider = SuperteamProvider(demo=demo)
+    bounties = provider.list_bounties(agent_only=agent_only)
+    mode = "DEMO" if demo else "REAL (Superteam Earn)"
+    print("=" * 62)
+    print(f" Bounties — {mode} · {len(bounties)} encontrados")
+    print("=" * 62)
+    for b in bounties:
+        flag = "🤖" if b.agent_allowed else "  "
+        print(f"  {flag} [{b.id[:8]}] {b.title[:48]}")
+        print(f"       ${b.reward_usd:.0f} {b.token} · skills: {','.join(b.skills) or '-'}")
+    if not demo:
+        print("-" * 62)
+        print("  🤖 = AGENT_ALLOWED. El cobro final requiere que un humano")
+        print("       visite /earn/claim/<claimCode> (los agentes no pasan KYC).")
+    provider.close()
+    return 0
+
+
+def _cmd_serve(port: int, price: str, network: str) -> int:
+    """Run the x402 paid service (the agent sells an HTTP API for USDC)."""
+    from vital.real.config import load_real_config
+    from vital.real.x402_service import run_service, TEST_FACILITATOR, PROD_FACILITATOR
+
+    cfg = load_real_config()
+    # In demo mode we still need an address to receive; use a placeholder.
+    pay_to = _env("VITAL_PAY_TO", "")
+    if not pay_to:
+        if cfg.is_real:
+            # derive from the real wallet
+            try:
+                from vital.real.wallet import make_wallet
+
+                pay_to = make_wallet(cfg).address()
+            except RuntimeError as exc:
+                print(f"❌ {exc}")
+                return 1
+        else:
+            pay_to = "0x0000000000000000000000000000000000000000"
+
+    facilitator = PROD_FACILITATOR if network == "base" else TEST_FACILITATOR
+
+    # Build the agent + bridge so settled x402 payments become real income.
+    status_provider = None
+    try:
+        from vital.real.agent import RealAgent
+        from vital.real.bridge import AgentStatusProvider
+
+        agent = RealAgent(cfg)
+        status_provider = AgentStatusProvider(agent)
+    except RuntimeError:
+        status_provider = None  # service still runs, income just not tracked
+
+    print("=" * 62)
+    print(" VITAL x402 paid service")
+    print(f"   Cobrar a : {pay_to}")
+    print(f"   Precio   : {price} USDC / request")
+    print(f"   Red      : {network}")
+    print(f"   Facilit. : {facilitator}")
+    print(f"   URL      : http://127.0.0.1:{port}/")
+    if status_provider is not None:
+        print(f"   Saldo    : ${status_provider.agent.ledger.balance:.6f} (los cobros se suman aquí)")
+    print("=" * 62)
+    try:
+        run_service(
+            port=port,
+            pay_to=pay_to,
+            price_usdc=price,
+            network=network,
+            facilitator_url=facilitator,
+            status_provider=status_provider,
+        )
+    except RuntimeError as exc:
+        print(f"❌ {exc}")
+        return 1
+    return 0
+
+
+def _env(name: str, default: str = "") -> str:
+    import os
+
+    return os.environ.get(name, default)
+
+
+def _env_real() -> bool:
+    return _env("VITAL_MODE", "demo").lower() == "real"
+
+
 def main(argv: list[str] | None = None) -> int:
     # Windows consoles default to cp1252; force UTF-8 so emoji survive.
     for stream in (sys.stdout, sys.stderr):
@@ -101,6 +279,21 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("reset", help="Borra la partida guardada")
     sub.add_parser("status", help="Muestra el estado guardado")
 
+    p_real = sub.add_parser("real", help="Agente de economía REAL (gana dinero real)")
+    p_real.add_argument("cycles", nargs="?", type=int, default=50)
+
+    sub.add_parser("real-tui", help="TUI del agente de economía REAL")
+
+    sub.add_parser("wallet", help="Muestra la wallet del agente (demo o real)")
+
+    p_bount = sub.add_parser("bounties", help="Lista bounties reales (Superteam Earn)")
+    p_bount.add_argument("--all", action="store_true", help="Incluir bounties no permitidos a agentes")
+
+    p_serve = sub.add_parser("serve", help="Servicio x402: vende una API y cobra USDC")
+    p_serve.add_argument("--port", type=int, default=8402)
+    p_serve.add_argument("--price", type=str, default="0.001", help="USDC por request")
+    p_serve.add_argument("--network", type=str, default="base-sepolia", help="base-sepolia (test) o base (mainnet)")
+
     args = parser.parse_args(argv)
 
     if args.command == "headless":
@@ -111,6 +304,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "status":
         return _cmd_status()
+    if args.command == "real":
+        return _cmd_real(args.cycles)
+    if args.command == "real-tui":
+        return _cmd_real_tui()
+    if args.command == "wallet":
+        return _cmd_wallet()
+    if args.command == "bounties":
+        return _cmd_bounties(agent_only=not args.all)
+    if args.command == "serve":
+        return _cmd_serve(args.port, args.price, args.network)
     # default: tui
     return _cmd_tui()
 
