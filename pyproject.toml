@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vital-agent"
+version = "0.1.0"
+description = "VITAL: an autonomous agent that knows its remaining life-credit and must earn its own money — or die."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "VITAL Project" }]
+keywords = ["agent", "simulation", "tui", "autonomy", "economy", "textual"]
+dependencies = [
+    "textual>=0.70",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+vital = "vital.cli:main"
+
+[tool.setuptools]
+packages = ["vital", "vital.core", "vital.tui"]
+
+[tool.setuptools.package-data]
+vital = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
