@@ -34,7 +34,8 @@ def test_tick_advances_world_and_age():
 
 def test_burn_reduces_credits_when_idle():
     """An agent that never earns must bleed credits."""
-    e = make_engine(start_credits=50.0, burn_per_tick=2.0)
+    # inflation=0 so the burn is exactly the configured value
+    e = make_engine(start_credits=50.0, burn_per_tick=2.0, inflation=0.0)
 
     class DoNothing(Brain):
         def decide(self, agent, world):
@@ -44,7 +45,7 @@ def test_burn_reduces_credits_when_idle():
     e.brain = DoNothing()
     e.tick()
     # only burn applied (no passive income)
-    assert e.agent.credits == pytest.approx(48.0, abs=0.01)
+    assert e.agent.credits == pytest.approx(48.0, abs=0.001)
 
 
 def test_death_when_credits_hit_zero():
@@ -114,7 +115,9 @@ def test_task_progress_completes_after_duration():
 
 
 def test_rest_recovers_energy():
-    e = make_engine()
+    """Resting must add the explicit rest bonus (not just passive regen)."""
+    # energy_regen=0 so ONLY the rest bonus can raise energy
+    e = make_engine(energy_regen=0.0, rest_bonus=16.0)
     e.agent.energy = 10.0
 
     class Rest(Brain):
@@ -124,8 +127,32 @@ def test_rest_recovers_energy():
 
     e.brain = Rest()
     e.tick()
-    # rest bonus + passive regen
-    assert e.agent.energy > 10.0
+    # exactly the rest bonus, since passive regen is disabled
+    assert e.agent.energy == pytest.approx(26.0, abs=0.01)
+
+
+def test_rest_beats_passive_regen():
+    """Resting must recover strictly more than idling (the rest bonus matters)."""
+    e_rest = make_engine(energy_regen=8.0, rest_bonus=16.0)
+    e_idle = make_engine(energy_regen=8.0, rest_bonus=16.0)
+    e_rest.agent.energy = 20.0
+    e_idle.agent.energy = 20.0
+
+    class Rest(Brain):
+        def decide(self, agent, world):
+            from vital.core.brain import Decision
+            return Decision(Action.REST, reason="test")
+
+    class DoNothing(Brain):
+        def decide(self, agent, world):
+            from vital.core.brain import Decision
+            return Decision(Action.WAIT, reason="test")
+
+    e_rest.brain = Rest()
+    e_idle.brain = DoNothing()
+    e_rest.tick()
+    e_idle.tick()
+    assert e_rest.agent.energy > e_idle.agent.energy
 
 
 def test_energy_capped_at_max():
@@ -159,9 +186,10 @@ def _rep(e):
 
 
 def test_burn_upgrade_reduces_burn():
-    e = make_engine(start_credits=500.0)
+    e = make_engine(start_credits=500.0, inflation=0.0)
+    base_burn = e.config.burn_per_tick
     e._do_buy("solar", _rep(e))
-    assert e.agent.burn == pytest.approx(2.0 * 0.75)
+    assert e.agent.burn == pytest.approx(base_burn * 0.75)
 
 
 def test_cannot_buy_without_credits():
@@ -196,9 +224,21 @@ def test_market_step_initializes_and_clamps():
 # Brain
 # --------------------------------------------------------------------------- #
 def test_brain_prefers_fast_task_when_dying():
+    """When near death with enough energy, the brain must WORK a short task."""
     e = make_engine(start_credits=10.0, burn_per_tick=2.0)
+    e.agent.energy = e.config.max_energy  # plenty of energy
     d = e.brain.decide(e.agent, e.world)
-    assert d.action in (Action.WORK, Action.REST)
+    assert d.action == Action.WORK
+    # the emergency pick should be a short task (duration <= 2)
+    assert TASKS[d.task_id].duration <= 2
+
+
+def test_brain_works_when_healthy():
+    """A healthy agent with energy should choose to work, not wait."""
+    e = make_engine(start_credits=200.0)
+    e.agent.energy = e.config.max_energy
+    d = e.brain.decide(e.agent, e.world)
+    assert d.action in (Action.WORK, Action.BUY)
 
 
 def test_brain_rests_when_no_energy():

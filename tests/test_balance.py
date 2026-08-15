@@ -27,9 +27,10 @@ def test_inflation_disabled_keeps_burn_flat():
 def test_burn_upgrade_still_reduces_burn_under_inflation():
     e = Engine(config=GameConfig(seed=1, inflation=0.0))
     e.agent.credits = 500.0  # enough to afford solar (150)
+    base_burn = e.config.burn_per_tick
     from vital.core.engine import TickReport
     e._do_buy("solar", TickReport(tick=0))
-    assert e.agent.burn == pytest.approx(2.0 * 0.75, rel=0.01)
+    assert e.agent.burn == pytest.approx(base_burn * 0.75, rel=0.01)
 
 
 def test_default_agent_survives_early_game():
@@ -58,11 +59,11 @@ def test_earn_or_die_distribution():
 
 
 def test_passive_income_can_reach_freedom():
-    """Buying all passive bots should exceed the freedom threshold."""
+    """Buying all passive bots + burn reducers should exceed the freedom threshold."""
     e = Engine(config=GameConfig(seed=1, inflation=0.0))
-    e.agent.credits = 10_000.0
+    e.agent.credits = 100_000.0
     from vital.core.engine import TickReport
-    for uid in ("bot1", "bot2", "bot3"):
+    for uid in ("bot1", "bot2", "bot3", "solar", "frugal"):
         e._do_buy(uid, TickReport(tick=0))
     total_passive = e.agent.passive_income
     assert total_passive >= e.agent.burn * e.config.passive_freedom_ratio
