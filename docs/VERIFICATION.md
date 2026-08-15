@@ -66,3 +66,27 @@ Todo lo siguiente se ejecutó y comprobó a mano (no solo se escribió).
 ## 12. Arranque real
 - `python -m vital.cli tui` arranca en un proceso real y sigue vivo 4s sin
   crashear (stderr vacío). ✅
+
+## 13. Casos límite y robustez (añadidos)
+- `vital` funciona desde **otro directorio de trabajo**: la ruta de guardado se
+  ancla al repo vía `__file__`, no al cwd. ✅
+- Override `VITAL_DATA_DIR` cambia el directorio de guardado. ✅
+- TUI a **80x24** (terminal pequeña) renderiza sin romperse. ✅
+- **Resize** de terminal (120x36 → 90x28 → 140x45) sin errores. ✅
+- Cargar una partida **ya muerta** o **ya ganada** muestra el overlay correcto al
+  arrancar (fix `b8a7b48`). ✅
+- `n` (nueva vida) revive al agente y oculta el overlay. ✅
+- `s` (guardar) crea el archivo. ✅
+- Botón de compra vía **clic de ratón real** (pilot.click) compra la mejora. ✅
+- `vital headless 0` y `vital headless -5` no crashean. ✅
+- **Stress**: 500 ticks en la TUI sin excepciones; log (cap 400) e historial
+  (cap 512) acotados. ✅
+- **Empaquetado**: `pip wheel` genera el `.whl`; se detectó y arregló que faltaba
+  `app.tcss` en el wheel (fix `978d54b`). Ahora `py.typed` y `app.tcss` están
+  incluidos. ✅
+- Entry point `vital.exe` instalado y funcional. ✅
+
+## 14. Verificación independiente (subagente QA)
+Un subagente re-ejecutó todo desde cero: **8/8 PASS** (tests, headless, camino de
+muerte, distribución gana/pierde, TUI, overlays, persistencia CLI, estado git).
+
