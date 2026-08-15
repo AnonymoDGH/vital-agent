@@ -261,7 +261,6 @@ class VitalApp(App):
         self.query_one("#eco-burn", Label).update(
             f"[#f85149]▼ coste -{agent.burn:.2f}₵/t[/]"
         )
-        net_cls = "good" if net >= 0 else "bad"
         self.query_one("#eco-net", Label).update(
             f"[{color}]balance {net:+.2f}₵/t[/]"
         )
