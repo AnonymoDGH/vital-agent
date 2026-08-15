@@ -27,6 +27,7 @@ packages = ["vital", "vital.core", "vital.tui"]
 
 [tool.setuptools.package-data]
 vital = ["py.typed"]
+"vital.tui" = ["*.tcss"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
