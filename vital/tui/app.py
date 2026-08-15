@@ -162,6 +162,12 @@ class VitalApp(App):
         self._build_tables()
         self._refresh_all()
         self._log_history()
+        # If we resumed a game that already ended, surface the overlay.
+        agent = self.engine.agent
+        if not agent.alive:
+            self._show_overlay(died=True)
+        elif agent.retired:
+            self._show_overlay(died=False)
         self._timer = self.set_interval(TICK_SECONDS, self._on_tick)
         self.query_one("#activity-log", Log).focus()
 
