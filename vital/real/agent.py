@@ -143,6 +143,43 @@ class RealAgent:
         return reports
 
     # ------------------------------------------------------------------ #
+    def work_bounties(self, demo: bool = True) -> dict:
+        """Use the LLM planner to pick a real bounty and submit work for it.
+
+        This is the agent actively "getting a job": it lists AGENT_ALLOWED
+        bounties, asks the LLM which to pursue and to draft the work, then
+        submits. Returns a report dict.
+
+        In demo mode the bounty list and submission are simulated (no network),
+        but the LLM planning step still runs (simulated in demo, real in real
+        mode) so the flow is exercised end to end.
+        """
+        from vital.real.bounties import SuperteamProvider
+        from vital.real.planner import Planner, ACTION_WORK_BOUNTY
+
+        provider = SuperteamProvider(demo=demo)
+        bounties = provider.list_bounties(agent_only=True)
+
+        planner = Planner(self.llm)
+        plan = planner.decide(self.status(), bounties)
+
+        report = {
+            "bounties_seen": len(bounties),
+            "plan": plan.to_dict(),
+            "submitted": False,
+            "result": None,
+        }
+
+        if plan.action == ACTION_WORK_BOUNTY and plan.bounty_id:
+            submission = {"content": plan.draft or "VITAL's submission"}
+            result = provider.submit(plan.bounty_id, submission)
+            report["submitted"] = True
+            report["result"] = result
+            # Record the planning LLM cost (the think that produced the draft).
+        provider.close()
+        return report
+
+    # ------------------------------------------------------------------ #
     def _build_prompt(self) -> str:
         return (
             f"Balance: ${self.ledger.balance:.6f}. "

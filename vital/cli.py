@@ -187,6 +187,41 @@ def _cmd_bounties(agent_only: bool) -> int:
     return 0
 
 
+def _cmd_work() -> int:
+    """The agent picks a real bounty (via LLM) and submits work for it."""
+    from vital.real.agent import RealAgent
+    from vital.real.config import load_real_config
+
+    cfg = load_real_config()
+    if cfg.validate():
+        cfg.mode = "demo"
+    try:
+        agent = RealAgent(cfg)
+    except RuntimeError as exc:
+        print(f"❌ {exc}")
+        return 1
+
+    demo = not cfg.is_real
+    print("=" * 62)
+    print(f" VITAL busca trabajo — {'DEMO' if demo else 'REAL'}")
+    print("=" * 62)
+    report = agent.work_bounties(demo=demo)
+    print(f"  Bounties vistos : {report['bounties_seen']}")
+    plan = report["plan"]
+    print(f"  Decisión        : {plan['action']}")
+    if plan.get("bounty_id"):
+        print(f"  Bounty elegido   : {plan['bounty_id'][:12]}")
+    if plan.get("reason"):
+        print(f"  Razón           : {plan['reason']}")
+    if plan.get("draft"):
+        draft = plan["draft"]
+        print(f"  Borrador        : {draft[:120]}{'…' if len(draft) > 120 else ''}")
+    if report["submitted"]:
+        print(f"  Enviado         : sí -> {report['result']}")
+    print("=" * 62)
+    return 0
+
+
 def _cmd_serve(port: int, price: str, network: str) -> int:
     """Run the x402 paid service (the agent sells an HTTP API for USDC)."""
     from vital.real.config import load_real_config
@@ -289,6 +324,8 @@ def main(argv: list[str] | None = None) -> int:
     p_bount = sub.add_parser("bounties", help="Lista bounties reales (Superteam Earn)")
     p_bount.add_argument("--all", action="store_true", help="Incluir bounties no permitidos a agentes")
 
+    sub.add_parser("work", help="El agente elige un bounty (vía LLM) y envía su trabajo")
+
     p_serve = sub.add_parser("serve", help="Servicio x402: vende una API y cobra USDC")
     p_serve.add_argument("--port", type=int, default=8402)
     p_serve.add_argument("--price", type=str, default="0.001", help="USDC por request")
@@ -312,6 +349,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_wallet()
     if args.command == "bounties":
         return _cmd_bounties(agent_only=not args.all)
+    if args.command == "work":
+        return _cmd_work()
     if args.command == "serve":
         return _cmd_serve(args.port, args.price, args.network)
     # default: tui

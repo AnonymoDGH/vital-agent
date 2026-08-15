@@ -50,15 +50,37 @@ class LLMClient:
         We model a realistic agent thought: a few hundred prompt tokens of
         context plus a short completion. This keeps demo economics in the same
         ballpark as real mode so the survival dynamics match.
+
+        If the prompt is a planner prompt (asks for a JSON action), we return a
+        valid JSON plan so the demo work flow runs end to end.
         """
         model = self.config.llm_model
         # ~1500 prompt + ~400 completion tokens ≈ a real reasoning step w/ context
         usage = LLMUsage(model=model, prompt_tokens=1500, completion_tokens=400)
         cost = usage.cost_usd()
-        text = (
-            "[demo] I considered my options. I should look for paid work to "
-            "cover my costs and grow my balance."
-        )
+
+        if "Choose your next action" in prompt or '"action"' in prompt:
+            # Planner mode: pick the first listed bounty if any, else wait.
+            import re
+
+            m = re.search(r"bounty id=(\S+)", prompt)
+            if m:
+                bounty_id = m.group(1)
+                text = (
+                    '{"action": "work_bounty", "bounty_id": "' + bounty_id + '", '
+                    '"draft": "VITAL\'s completed work for this bounty.", '
+                    '"reason": "Highest expected value for my current runway."}'
+                )
+            else:
+                text = (
+                    '{"action": "wait", "bounty_id": "", "draft": "", '
+                    '"reason": "No open bounties; conserving funds."}'
+                )
+        else:
+            text = (
+                "[demo] I considered my options. I should look for paid work to "
+                "cover my costs and grow my balance."
+            )
         return ThinkResult(text=text, usage=usage, cost_usd=cost, simulated=True)
 
     def _think_openai(self, prompt: str, system: str) -> ThinkResult:
