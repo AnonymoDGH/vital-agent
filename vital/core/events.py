@@ -59,13 +59,17 @@ def _bonus_contract(agent: Agent, world: WorldState, rng: random.Random) -> str:
     return f"Bono por contrato completado: +{amount}₵"
 
 
-def _market_boom(agent: Agent, world: WorldState, rng: random.Random) -> str:
+def _market_boom(agent: Agent, world: WorldState, rng: random.Random) -> Optional[str]:
+    if not world.market:
+        return None
     cat = rng.choice(list(world.market.keys()))
     world.market[cat] = min(1.8, world.market.get(cat, 1.0) + 0.35)
     return f"Boom de mercado: la categoría '{cat}' se dispara"
 
 
-def _market_crash(agent: Agent, world: WorldState, rng: random.Random) -> str:
+def _market_crash(agent: Agent, world: WorldState, rng: random.Random) -> Optional[str]:
+    if not world.market:
+        return None
     cat = rng.choice(list(world.market.keys()))
     world.market[cat] = max(0.6, world.market.get(cat, 1.0) - 0.35)
     return f"Caída de mercado: la categoría '{cat}' se hunde"
@@ -114,7 +118,7 @@ def maybe_fire_event(
         if roll <= acc:
             msg = ev.apply(agent, world, rng)
             if msg:
-                world.log.append(f"{ev.icon} {ev.name}: {msg}")
+                world.append_log(f"{ev.icon} {ev.name}: {msg}")
                 return ev
             return None
     return None

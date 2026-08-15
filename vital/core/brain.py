@@ -75,7 +75,9 @@ class Brain:
         for tid, t in TASKS.items():
             if t.skill_gate > agent.skill:
                 continue
-            if agent.energy < t.energy_cost:
+            # Use the same threshold the caller gates on, so a task that is
+            # returned here is always one the agent can actually start.
+            if agent.energy < self._energy_for(tid):
                 continue
             market = world.market.get(t.category, 1.0)
             reward = t.base_reward * market * agent.reward_mult

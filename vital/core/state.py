@@ -17,15 +17,15 @@ from typing import Optional
 class GameConfig:
     """Tuning knobs for a VITAL run."""
 
-    start_credits: float = 80.0       # life-credit the agent is born with
-    burn_per_tick: float = 2.0        # cost of staying alive each tick
+    start_credits: float = 75.0       # life-credit the agent is born with
+    burn_per_tick: float = 2.5        # cost of staying alive each tick
     max_energy: float = 100.0
     energy_regen: float = 8.0         # passive energy recovery per tick
     rest_bonus: float = 16.0          # extra recovery when actively resting
     target_credits: float = 6_000.0   # "financial freedom" => win
     passive_freedom_ratio: float = 8.0  # passive income >= burn * ratio => win
     event_chance: float = 0.20        # probability of a world event per tick
-    inflation: float = 300.0          # burn doubles every this many ticks
+    inflation: float = 130.0          # burn doubles every this many ticks
     seed: Optional[int] = None        # None => random run
 
 
@@ -122,6 +122,16 @@ class WorldState:
     history_income: list[float] = field(default_factory=list)
     history_runway: list[float] = field(default_factory=list)
     log: list[str] = field(default_factory=list)
+    log_total: int = 0  # total lines ever appended (monotonic; survives truncation)
+
+    LOG_CAP = 400
+
+    def append_log(self, line: str) -> None:
+        """Append a log line, tracking the monotonic total and capping memory."""
+        self.log.append(line)
+        self.log_total += 1
+        if len(self.log) > self.LOG_CAP:
+            self.log = self.log[-self.LOG_CAP:]
 
     def push_history(self, agent: Agent, income: float) -> None:
         self.history_credits.append(round(agent.credits, 2))

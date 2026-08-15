@@ -97,19 +97,23 @@ class Engine:
         # 7) mood drifts toward neutral
         agent.mood += (0.7 - agent.mood) * 0.05
 
-        # 8) world event
+        # 8) world event (track any credit delta so history stays accurate)
+        credits_before_event = agent.credits
         ev = events_mod.maybe_fire_event(agent, self.world, self.rng, cfg.event_chance)
         if ev:
             rep.event_name = ev.name
+            delta = agent.credits - credits_before_event
+            if delta > 0:
+                rep.income += delta
+            elif delta < 0:
+                rep.spent += -delta
 
         # 9) bookkeeping
         self.world.push_history(agent, rep.income)
-        self.world.log.append(
+        self.world.append_log(
             f"[t{self.world.tick}] {decision.reason} "
             f"(+{rep.income:.1f} / -{rep.spent:.1f} ₵)"
         )
-        if len(self.world.log) > 400:
-            self.world.log = self.world.log[-400:]
 
         # 10) death / victory checks
         if agent.credits <= 0:

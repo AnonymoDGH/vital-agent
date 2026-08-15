@@ -79,7 +79,7 @@ class VitalApp(App):
         super().__init__()
         self.engine = engine or persistence.load_engine() or Engine(GameConfig())
         self._timer: Timer | None = None
-        self._last_log_len = 0
+        self._last_log_total = 0  # world.log_total already shown in the Log widget
 
     # ------------------------------------------------------------------ #
     # Composition
@@ -215,12 +215,15 @@ class VitalApp(App):
 
     def _apply_report(self, rep: TickReport) -> None:
         log = self.query_one("#activity-log", Log)
-        # append new world log lines
-        world_log = self.engine.world.log
-        if len(world_log) > self._last_log_len:
-            for line in world_log[self._last_log_len:]:
+        # Append only the world-log lines we have not shown yet. Using the
+        # monotonic log_total (instead of len(log)) keeps working even after
+        # the engine truncates its in-memory log to the cap.
+        world = self.engine.world
+        new_lines = world.log_total - self._last_log_total
+        if new_lines > 0:
+            for line in world.log[-new_lines:]:
                 log.write_line(line)
-            self._last_log_len = len(world_log)
+            self._last_log_total = world.log_total
         for msg in rep.messages:
             log.write_line(msg)
 
@@ -294,14 +297,14 @@ class VitalApp(App):
             f"[#8b949e][space] pausa · [s] guardar · [n] nueva vida · [q] salir[/]"
         )
 
-        # task panel
-        if agent.active_task:
-            t = TASKS[agent.active_task]
+        # task panel (guard against a stale/unknown task id)
+        task = TASKS.get(agent.active_task) if agent.active_task else None
+        if task is not None:
             self.query_one("#task-label", Label).update(
-                f"{t.icon} {t.name} — progreso {agent.task_progress}/{t.duration}"
+                f"{task.icon} {task.name} — progreso {agent.task_progress}/{task.duration}"
             )
             self.query_one("#task-bar", ProgressBar).update(
-                total=float(t.duration), progress=float(agent.task_progress)
+                total=float(task.duration), progress=float(agent.task_progress)
             )
         else:
             self.query_one("#task-label", Label).update("Sin tarea activa")
@@ -328,7 +331,8 @@ class VitalApp(App):
         log = self.query_one("#activity-log", Log)
         for line in self.engine.world.log[-80:]:
             log.write_line(line)
-        self._last_log_len = len(self.engine.world.log)
+        # We have now displayed everything up to the current monotonic total.
+        self._last_log_total = self.engine.world.log_total
 
     # ------------------------------------------------------------------ #
     # Overlay (death / victory)
@@ -386,7 +390,7 @@ class VitalApp(App):
     def action_new_life(self) -> None:
         persistence.clear_save()
         self.engine = Engine(GameConfig())
-        self._last_log_len = 0
+        self._last_log_total = 0
         self.query_one("#activity-log", Log).clear()
         self._hide_overlay()
         if self._timer:
