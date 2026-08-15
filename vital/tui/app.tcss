@@ -1,0 +1,208 @@
+/* VITAL — Cursor-AI inspired dark theme */
+
+Screen {
+    background: #0d1117;
+}
+
+/* ---------- Header ---------- */
+#topbar {
+    dock: top;
+    height: 3;
+    background: #161b22;
+    border-bottom: thick #21262d;
+    padding: 0 1;
+}
+
+#topbar .title {
+    color: #e6edf3;
+    text-style: bold;
+}
+
+#topbar .accent {
+    color: #a371f7;
+    text-style: bold;
+}
+
+#topbar .subtitle {
+    color: #8b949e;
+}
+
+/* ---------- Layout ---------- */
+#body {
+    layout: horizontal;
+}
+
+#sidebar {
+    width: 30;
+    background: #161b22;
+    border-right: thick #21262d;
+    padding: 1;
+}
+
+#main {
+    width: 1fr;
+    padding: 1;
+}
+
+/* ---------- Sidebar cards ---------- */
+.card {
+    background: #0d1117;
+    border: round #30363d;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.card .card-title {
+    color: #8b949e;
+    text-style: bold;
+    width: 100%;
+}
+
+.big-number {
+    color: #e6edf3;
+    text-style: bold;
+    width: 100%;
+}
+
+.subtle {
+    color: #8b949e;
+    width: 100%;
+}
+
+.good { color: #3fb950; }
+.warn { color: #d29922; }
+.bad  { color: #f85149; }
+.info { color: #58a6ff; }
+.purple { color: #a371f7; }
+
+/* ---------- Tabs ---------- */
+TabbedContent {
+    background: #0d1117;
+}
+
+Tab {
+    color: #8b949e;
+    background: #161b22;
+}
+
+Tab.-active {
+    color: #e6edf3;
+    background: #21262d;
+    text-style: bold;
+}
+
+TabPane {
+    padding: 1;
+}
+
+/* ---------- Log ---------- */
+#activity-log {
+    background: #0d1117;
+    border: round #30363d;
+    height: 1fr;
+}
+
+/* ---------- Tables ---------- */
+DataTable {
+    background: #0d1117;
+    border: round #30363d;
+    height: 1fr;
+}
+
+DataTable > .datatable--header {
+    background: #161b22;
+    color: #a371f7;
+    text-style: bold;
+}
+
+/* ---------- Task progress ---------- */
+#task-panel {
+    dock: bottom;
+    height: 5;
+    background: #161b22;
+    border: round #30363d;
+    padding: 0 1;
+}
+
+ProgressBar Bar {
+    color: #a371f7;
+}
+
+ProgressBar PercentageStatus {
+    color: #e6edf3;
+}
+
+/* ---------- Footer ---------- */
+#statusbar {
+    dock: bottom;
+    height: 1;
+    background: #161b22;
+    border-top: thick #21262d;
+    color: #8b949e;
+    padding: 0 1;
+}
+
+#statusbar .dot-good { color: #3fb950; }
+#statusbar .dot-bad  { color: #f85149; }
+
+/* ---------- Buttons ---------- */
+Button {
+    background: #21262d;
+    color: #e6edf3;
+    border: round #30363d;
+}
+
+Button:hover {
+    background: #30363d;
+}
+
+Button.-primary {
+    background: #6e40c9;
+    border: round #a371f7;
+}
+
+/* ---------- Overlay (death / win) ---------- */
+#overlay {
+    align: center middle;
+    background: rgba(5, 8, 12, 0.72);
+    layer: overlay;
+    display: none;
+}
+
+#overlay.show {
+    display: block;
+}
+
+#overlay-box {
+    width: 64;
+    height: auto;
+    background: #161b22;
+    border: double #a371f7;
+    padding: 1 2;
+}
+
+#overlay-box .headline {
+    text-style: bold;
+    width: 100%;
+    text-align: center;
+}
+
+#overlay-body {
+    width: 100%;
+    text-align: center;
+    color: #e6edf3;
+    margin: 1 0;
+}
+
+#overlay-hint {
+    width: 100%;
+    text-align: center;
+}
+
+#overlay-box.dead {
+    border: double #f85149;
+}
+
+#overlay-box.won {
+    border: double #3fb950;
+}
