@@ -242,10 +242,36 @@ def _cmd_scan() -> int:
     else:
         print("  (sin oportunidades vivas ahora mismo — los bounties rotan,")
         print("   vuelve a escanear más tarde)")
+    if report.market_apis:
+        print(f"  🛒 Mercado x402: {len(report.market_apis)} APIs de pago vistas (usa `vital market`)")
     if report.errors:
         print("  ⚠️  errores por fuente:")
         for src, err in report.errors.items():
             print(f"     {src}: {err[:120]}")
+    print("=" * 62)
+    return 0
+
+
+def _cmd_market(limit: int) -> int:
+    """Browse the x402 Bazaar: paid APIs that agents buy (market research)."""
+    from vital.real.bazaar import fetch_all_bazaars
+
+    print("=" * 62)
+    print(" Mercado x402 — APIs de pago que otros agentes venden")
+    print("=" * 62)
+    apis = fetch_all_bazaars(limit_each=limit)
+    if not apis:
+        print("  (no se pudo leer ningún catálogo Bazaar)")
+        return 1
+    # sort by price ascending (cheapest first)
+    apis.sort(key=lambda a: a.price_usdc)
+    for a in apis[:limit]:
+        print(f"  ${a.price_usdc:.4f} [{a.source}] {a.method} {a.url[:52]}")
+        if a.description:
+            print(f"           {a.description[:70]}")
+    print("-" * 62)
+    print(f"  {len(apis)} APIs en el catálogo. VITAL puede comprarlas con una")
+    print("  wallet financiada + cliente x402 (docs/REAL_MODE.md).")
     print("=" * 62)
     return 0
 
@@ -356,6 +382,9 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("scan", help="Escanea trabajo pagado EN VIVO en las fuentes conectadas")
 
+    p_market = sub.add_parser("market", help="Explora el Bazaar x402: APIs de pago que venden otros agentes")
+    p_market.add_argument("--limit", type=int, default=20)
+
     p_serve = sub.add_parser("serve", help="Servicio x402: vende una API y cobra USDC")
     p_serve.add_argument("--port", type=int, default=8402)
     p_serve.add_argument("--price", type=str, default="0.001", help="USDC por request")
@@ -383,6 +412,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_work()
     if args.command == "scan":
         return _cmd_scan()
+    if args.command == "market":
+        return _cmd_market(args.limit)
     if args.command == "serve":
         return _cmd_serve(args.port, args.price, args.network)
     # default: tui

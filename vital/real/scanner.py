@@ -55,6 +55,7 @@ class ScanReport:
 
     scanned_at: str
     opportunities: list[Opportunity] = field(default_factory=list)
+    market_apis: list = field(default_factory=list)  # paid APIs agents buy (Bazaar)
     errors: dict[str, str] = field(default_factory=dict)
     sources_checked: list[str] = field(default_factory=list)
 
@@ -62,6 +63,7 @@ class ScanReport:
         return {
             "scanned_at": self.scanned_at,
             "opportunities": [o.to_dict() for o in self.opportunities],
+            "market_apis": [a.to_dict() for a in self.market_apis],
             "errors": self.errors,
             "sources_checked": self.sources_checked,
         }
@@ -89,6 +91,7 @@ class JobScanner:
     def scan(self) -> ScanReport:
         report = ScanReport(scanned_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
         self._scan_superteam(report)
+        self._scan_bazaar(report)
         # sort by reward desc
         report.opportunities.sort(key=lambda o: o.reward_usd, reverse=True)
         return report
@@ -147,8 +150,14 @@ class JobScanner:
             report.errors["superteam"] = str(exc)
 
     def _raw_superteam(self, provider: SuperteamProvider) -> list:
-        """Fetch raw Superteam listings (agent endpoint if key, else public)."""
+        """Fetch raw Superteam listings, MERGING the agent endpoint and the
+        public listing (deduplicated by id). The agent endpoint only returns
+        agent-eligible listings, which may all be expired while the public
+        listing still has live agent-allowed ones — so we combine both.
+        """
         from vital.real.bounties import BASE_URL
+
+        merged: dict[str, dict] = {}
 
         if provider.api_key:
             try:
@@ -159,18 +168,44 @@ class JobScanner:
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                return data if isinstance(data, list) else data.get("listings", [])
+                items = data if isinstance(data, list) else data.get("listings", [])
+                for it in items:
+                    if isinstance(it, dict) and it.get("id"):
+                        merged[str(it["id"])] = it
             except Exception:
                 pass
+
         try:
             resp = provider._client().get(
                 f"{BASE_URL}/listings", params={"type": "bounty"}
             )
             resp.raise_for_status()
             data = resp.json()
-            return data if isinstance(data, list) else data.get("listings", data.get("bounties", []))
+            items = data if isinstance(data, list) else data.get("listings", data.get("bounties", []))
+            for it in items:
+                if isinstance(it, dict) and it.get("id"):
+                    merged.setdefault(str(it["id"]), it)
         except Exception:
-            return []
+            pass
+
+        return list(merged.values())
+
+    # ------------------------------------------------------------------ #
+    def _scan_bazaar(self, report: ScanReport) -> None:
+        """Populate market_apis from the x402 Bazaar catalogs.
+
+        These are paid APIs agents BUY (market context / potential spend), not
+        income, so they go in market_apis rather than opportunities.
+        """
+        report.sources_checked.append("x402-bazaar")
+        if self.demo:
+            return  # offline demo: no market data
+        try:
+            from vital.real.bazaar import fetch_all_bazaars
+
+            report.market_apis = fetch_all_bazaars(limit_each=25)
+        except Exception as exc:
+            report.errors["x402-bazaar"] = str(exc)
 
 
 def load_superteam_key() -> Optional[str]:
