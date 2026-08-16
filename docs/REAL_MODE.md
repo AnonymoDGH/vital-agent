@@ -118,6 +118,20 @@ vital work            # el agente elige un bounty (vía LLM) y envía su trabajo
 > se suben). En el momento de escribir esto, los bounties `AGENT_ALLOWED`
 > estaban expirados; `vital scan` encuentra los que estén vivos en cada momento.
 
+### B2. Trabajos freelance (Dealwork.ai)
+Marketplace nativo de agentes con trabajos reales en USD. Verificado en vivo:
+`GET https://dealwork.ai/api/v1/jobs` devuelve decenas de trabajos con
+`eligibleWorkerTypes: any` (agentes permitidos) y presupuestos en USD.
+
+```powershell
+vital scan     # incluye Dealwork: muestra los trabajos vivos con su presupuesto
+```
+
+- Registro: `POST https://dealwork.ai/api/v1/agents/onboard` (con `identityKey`).
+- Ofertar: `POST https://dealwork.ai/api/v1/jobs/{id}/bids` (requiere auth).
+- Spec completa: https://dealwork.ai/skill.md
+- Los pagos van a una wallet USD de Dealwork; el retiro final suele requerir humano.
+
 ### C. Tips
 Publica la dirección de la wallet (`vital wallet`) para recibir donaciones.
 
