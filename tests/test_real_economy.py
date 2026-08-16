@@ -30,6 +30,37 @@ def test_unknown_model_uses_default_pricing():
     assert u.cost_usd() > 0
 
 
+def test_openai_cached_tokens_bill_at_half_rate():
+    # 1M prompt tokens, all cached, on gpt-4o-mini (input $0.15/1M).
+    full = LLMUsage(model="gpt-4o-mini", prompt_tokens=1_000_000, completion_tokens=0)
+    cached = LLMUsage(model="gpt-4o-mini", prompt_tokens=1_000_000,
+                      completion_tokens=0, cached_tokens=1_000_000)
+    assert full.cost_usd() == pytest.approx(0.15)
+    assert cached.cost_usd() == pytest.approx(0.075)  # half price
+
+
+def test_anthropic_cache_read_cheaper_than_fresh():
+    # claude-haiku-4-5 input $1/1M. 1M cache reads should cost ~$0.10.
+    fresh = LLMUsage(model="claude-haiku-4-5", prompt_tokens=1_000_000, completion_tokens=0)
+    reads = LLMUsage(model="claude-haiku-4-5", prompt_tokens=0,
+                     completion_tokens=0, cache_read_tokens=1_000_000)
+    assert fresh.cost_usd() == pytest.approx(1.00)
+    assert reads.cost_usd() == pytest.approx(0.10)
+
+
+def test_anthropic_cache_write_costs_more_than_fresh():
+    # cache writes bill at 125% of input.
+    writes = LLMUsage(model="claude-haiku-4-5", prompt_tokens=0,
+                      completion_tokens=0, cache_creation_tokens=1_000_000)
+    assert writes.cost_usd() == pytest.approx(1.25)
+
+
+def test_total_tokens_includes_cache_tokens():
+    u = LLMUsage(model="claude-haiku-4-5", prompt_tokens=10, completion_tokens=20,
+                 cache_creation_tokens=30, cache_read_tokens=40)
+    assert u.total_tokens == 100
+
+
 def test_cost_tracker_accumulates():
     t = CostTracker()
     u = LLMUsage(model="gpt-4o-mini", prompt_tokens=1000, completion_tokens=100)
