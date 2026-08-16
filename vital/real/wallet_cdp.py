@@ -72,16 +72,23 @@ class CDPWallet(Wallet):
         return asyncio.run(coro)
 
     # ------------------------------------------------------------------ #
+    async def _account(self, cdp):
+        """Return the agent's account via the verified idempotent method.
+
+        get_or_create_account(name=...) is the confirmed cdp-sdk v2 call; it
+        returns the existing account when the name already exists, so it is safe
+        to call repeatedly.
+        """
+        return await cdp.evm.get_or_create_account(name=self._account_name)
+
     async def _get_address(self) -> str:
         async with self._client() as cdp:
-            account = await cdp.evm.get_or_create_account(name=self._account_name)
+            account = await self._account(cdp)
             return account.address
 
     async def _get_balance(self) -> float:
         async with self._client() as cdp:
-            account = await cdp.evm.get_account(
-                address=self._address,
-            )
+            account = await self._account(cdp)
             balances = await account.list_token_balances(network=self.config.network)
             for b in balances.balances:
                 if getattr(b.token, "symbol", "") == "USDC":
@@ -91,7 +98,7 @@ class CDPWallet(Wallet):
 
     async def _transfer(self, to: str, amount_usdc: float) -> str:
         async with self._client() as cdp:
-            account = await cdp.evm.get_account(address=self._address)
+            account = await self._account(cdp)
             amount_units = int(round(amount_usdc * (10 ** USDC_DECIMALS)))
             result = await account.transfer(
                 to=to,
@@ -104,7 +111,7 @@ class CDPWallet(Wallet):
     async def _faucet(self) -> str:
         """Testnet only: request free USDC on base-sepolia."""
         async with self._client() as cdp:
-            account = await cdp.evm.get_account(address=self._address)
+            account = await self._account(cdp)
             result = await account.request_faucet(
                 network="base-sepolia", token="usdc"
             )
