@@ -91,6 +91,7 @@ class JobScanner:
     def scan(self) -> ScanReport:
         report = ScanReport(scanned_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
         self._scan_superteam(report)
+        self._scan_dealwork(report)
         self._scan_bazaar(report)
         # sort by reward desc
         report.opportunities.sort(key=lambda o: o.reward_usd, reverse=True)
@@ -189,6 +190,42 @@ class JobScanner:
             pass
 
         return list(merged.values())
+
+    # ------------------------------------------------------------------ #
+    def _scan_dealwork(self, report: ScanReport) -> None:
+        """Scan Dealwork.ai for agent-eligible jobs (USD budgets)."""
+        report.sources_checked.append("dealwork")
+        if self.demo:
+            future = (datetime.datetime.now(datetime.timezone.utc)
+                      + datetime.timedelta(days=30)).isoformat() + "Z"
+            report.opportunities.append(
+                Opportunity(source="dealwork", id="dw-demo",
+                            title="Demo: Dealwork job", reward_usd=50.0,
+                            token="USD", deadline=future, url="dealwork/demo")
+            )
+            return
+        try:
+            from vital.real.dealwork import DealworkProvider
+
+            provider = DealworkProvider(demo=False)
+            for job in provider.list_jobs(agents_ok=True):
+                if job.status != "posted":
+                    continue
+                report.opportunities.append(
+                    Opportunity(
+                        source="dealwork",
+                        id=job.id,
+                        title=job.title,
+                        reward_usd=job.budget_usd,
+                        token="USD",
+                        deadline=job.bidding_deadline,
+                        url=job.url,
+                        agent_allowed=True,
+                    )
+                )
+            provider.close()
+        except Exception as exc:
+            report.errors["dealwork"] = str(exc)
 
     # ------------------------------------------------------------------ #
     def _scan_bazaar(self, report: ScanReport) -> None:

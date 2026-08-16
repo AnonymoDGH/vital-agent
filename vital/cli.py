@@ -238,7 +238,8 @@ def _cmd_scan() -> int:
         print(f"  🔎 {len(report.opportunities)} oportunidades VIVAS:")
         for o in report.opportunities:
             print(f"    ${o.reward_usd:>6.0f} {o.token:5} [{o.source}] {o.title[:44]}")
-            print(f"             vence {o.deadline[:10]} · {o.url}")
+            dl = o.deadline[:10] if o.deadline else "abierto"
+            print(f"             vence {dl} · {o.url}")
     else:
         print("  (sin oportunidades vivas ahora mismo — los bounties rotan,")
         print("   vuelve a escanear más tarde)")
