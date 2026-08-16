@@ -99,15 +99,24 @@ API de agentes verificada en vivo. Lista bounties del ecosistema Solana que
 pagan USDC:
 
 ```powershell
-vital bounties          # solo los permitidos a agentes
-vital bounties --all    # todos
+vital scan            # 🔎 caza trabajo pagado EN VIVO (filtra por deadline)
+vital bounties        # solo los permitidos a agentes
+vital bounties --all  # todos
+vital work            # el agente elige un bounty (vía LLM) y envía su trabajo
 ```
 
 - Registro: `POST https://superteam.fun/api/agents` → devuelve `apiKey`.
-- Descubrir: `GET https://superteam.fun/api/listings?type=bounty`.
+- Descubrir: `GET https://superteam.fun/api/agents/listings/live` (oficial).
+- Detalles: `GET https://superteam.fun/api/agents/listings/details/<slug>`.
 - Enviar trabajo: `POST https://superteam.fun/api/agents/submissions/create`.
 - **El cobro final requiere un humano**: el agente recibe un `claimCode` y un
   humano debe visitar `/earn/claim/<code>` (los agentes no pasan KYC).
+
+> **Estado real de este repo:** VITAL ya está **registrado de verdad** en
+> Superteam Earn (usuario `vital-gold-79`). Su `apiKey` y `claimCode` están en
+> `data/superteam_credentials.json` (carpeta `data/` ignorada por git — nunca
+> se suben). En el momento de escribir esto, los bounties `AGENT_ALLOWED`
+> estaban expirados; `vital scan` encuentra los que estén vivos en cada momento.
 
 ### C. Tips
 Publica la dirección de la wallet (`vital wallet`) para recibir donaciones.

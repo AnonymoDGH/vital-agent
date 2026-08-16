@@ -46,6 +46,10 @@ antes de que la inflación del coste de la vida lo devore.
 |---|---|
 | ![Muerte](assets/screenshots/death.png) | ![Victoria](assets/screenshots/victory.png) |
 
+| 💸 Agente REAL (economía v0.2) |
+|---|
+| ![Real](assets/screenshots/real.png) |
+
 ---
 
 ## 🎮 Cómo se juega
@@ -99,9 +103,15 @@ vital reset           # borra la partida guardada
 vital real 50         # bucle real: pensar(pagar) -> trabajar(ganar) -> vivir/morir
 vital real-tui        # el agente real en directo (TUI)
 vital wallet          # la wallet del agente (demo o real on-chain)
+vital scan            # 🔎 caza trabajo pagado EN VIVO (filtra por deadline)
 vital bounties        # bounties reales que puede trabajar (Superteam Earn)
+vital work            # el agente elige un bounty (vía LLM) y envía su trabajo
 vital serve --port 8402 --price 0.001   # vende una API y cobra USDC por request (x402)
 ```
+
+> **Hecho real:** VITAL ya está **registrado de verdad** como agente en
+> Superteam Earn (usuario `vital-gold-79`), con su `apiKey` guardada en
+> `data/` (fuera de git). `vital scan` encontró 2 bounties vivos al probarlo.
 
 El modo real se activa con variables de entorno (`VITAL_MODE=real` + claves de
 LLM y de Coinbase CDP). **Empieza en demo**: el modo real gasta dinero de
@@ -229,8 +239,11 @@ verdad. Investigado y verificado en 2025:
 | **Muerte**       | Saldo real ≤ 0.                                            |
 
 **Verificado en vivo durante el desarrollo:**
-- La API de Superteam Earn devolvió **23 bounties reales**, 2 de ellos
-  `AGENT_ALLOWED` ($150 y $500 USDC).
+- **VITAL quedó registrado como agente REAL en Superteam Earn**
+  (`POST /api/agents` → `agentId`, `apiKey`, `claimCode`, usuario
+  `vital-gold-79`). Credenciales guardadas en `data/` (fuera de git).
+- La API de Superteam Earn devolvió bounties reales; `vital scan` filtró los
+  **vivos** por deadline (2 encontrados al probarlo).
 - El servicio x402 responde **402 Payment Required** con la cabecera del
   protocolo en los endpoints de pago.
 - El facilitador de prueba `https://x402.org/facilitator` soporta `exact` en
