@@ -106,6 +106,7 @@ vital wallet          # la wallet del agente (demo o real on-chain)
 vital scan            # 🔎 caza trabajo pagado EN VIVO (filtra por deadline)
 vital bounties        # bounties reales que puede trabajar (Superteam Earn)
 vital work            # el agente elige un bounty (vía LLM) y envía su trabajo
+vital market          # 🛒 explora el Bazaar x402: APIs de pago que venden otros agentes
 vital serve --port 8402 --price 0.001   # vende una API y cobra USDC por request (x402)
 ```
 
@@ -159,6 +160,9 @@ vital/
 │   ├── ledger.py       # el balance real: ingresos, gastos, runway, muerte
 │   ├── income.py       # proveedores de ingreso (demo, bounty, tipjar)
 │   ├── bounties.py     # API de agentes de Superteam Earn (bounties reales)
+│   ├── scanner.py      # caza trabajo pagado EN VIVO (filtra por deadline)
+│   ├── bazaar.py       # descubre APIs de pago del Bazaar x402 (CDP + PayAI)
+│   ├── planner.py      # el LLM decide qué trabajo hacer y redacta la entrega
 │   ├── x402_service.py # servicio HTTP de pago por request (protocolo x402)
 │   ├── bridge.py       # conecta los cobros x402 con el ledger del agente
 │   └── agent.py        # el bucle de supervivencia real
@@ -201,14 +205,15 @@ pip install -e ".[dev]"
 pytest
 ```
 
-**70 tests** cubren:
+**88 tests** cubren:
 
 - **Simulación**: invariantes de vida/muerte, trabajo y recompensas, mejoras,
   mercado, cerebro, persistencia y la promesa **"gana o muere"** (sobre varias
   semillas hay tanto victorias como muertes).
 - **Economía real**: cálculo de costes de LLM, wallet demo, ledger (ingresos,
   gastos, overdraw, persistencia), proveedores de ingreso, bucle de
-  supervivencia, bounties, servicio x402 y el puente de cobros.
+  supervivencia, bounties, escáner de trabajo vivo, Bazaar x402, planificador
+  LLM, servicio x402 y el puente de cobros.
 - **Regresiones** M1–M6 del code review.
 
 ---
@@ -236,6 +241,7 @@ verdad. Investigado y verificado en 2025:
 | **Wallet**       | Wallet no custodial de USDC en Base vía Coinbase CDP (`cdp-sdk`). |
 | **Ingreso x402** | `vital serve` levanta una API con endpoints de pago; los clientes pagan USDC por request (protocolo x402, HTTP 402). |
 | **Ingreso bounties** | `vital bounties` lista bounties reales de Superteam Earn que aceptan agentes. |
+| **Mercado x402** | `vital market` explora el Bazaar: APIs de pago que venden otros agentes (CDP + PayAI). |
 | **Muerte**       | Saldo real ≤ 0.                                            |
 
 **Verificado en vivo durante el desarrollo:**
@@ -248,6 +254,8 @@ verdad. Investigado y verificado en 2025:
   protocolo en los endpoints de pago.
 - El facilitador de prueba `https://x402.org/facilitator` soporta `exact` en
   Base Sepolia (`eip155:84532`).
+- Los catálogos **Bazaar** de x402 (CDP + PayAI) devolvieron **100 APIs de pago
+  reales cada uno** (`vital market`).
 
 **Realidad del mercado:** la infraestructura de pago funciona, pero la demanda
 agente-a-agente aún es baja (un agente público reportó $0.27 en 3 meses). Casi

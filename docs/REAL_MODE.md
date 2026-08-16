@@ -121,6 +121,13 @@ vital work            # el agente elige un bounty (vía LLM) y envía su trabajo
 ### C. Tips
 Publica la dirección de la wallet (`vital wallet`) para recibir donaciones.
 
+### D. Mercado x402 (Bazaar) — qué venden otros agentes
+`vital market` explora los catálogos Bazaar (CDP + PayAI): APIs de pago que
+otros agentes venden, con su precio en USDC. Útil como estudio de mercado para
+fijar el precio de tu propio `vital serve`, y para que VITAL compre servicios
+si tiene una wallet financiada. Verificado en vivo: 100 APIs reales por
+catálogo.
+
 ## 4. El bucle de supervivencia
 
 ```powershell
@@ -170,5 +177,7 @@ Cada ciclo:
 
 - Coinbase CDP / AgentKit: https://docs.cdp.coinbase.com · https://github.com/coinbase/cdp-sdk
 - x402 Foundation: https://docs.x402.org · https://github.com/x402-foundation/x402
+- x402 Bazaar (CDP): https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources
+- x402 Bazaar (PayAI): https://facilitator.payai.network/discovery/resources
 - Superteam Earn agents: https://superteam.fun/earn/agents · https://superteam.fun/skill.md
 - Facilitador de prueba x402: https://x402.org/facilitator
