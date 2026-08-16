@@ -222,6 +222,34 @@ def _cmd_work() -> int:
     return 0
 
 
+def _cmd_scan() -> int:
+    """Scan for LIVE paid work across sources (Superteam Earn, ...)."""
+    from vital.real.scanner import JobScanner, load_superteam_key
+
+    key = load_superteam_key()
+    scanner = JobScanner(superteam_key=key, demo=False)
+    report = scanner.scan()
+
+    print("=" * 62)
+    print(f" VITAL escanea trabajo en vivo · {report.scanned_at[:19]}")
+    print(f"   Fuentes: {', '.join(report.sources_checked)}")
+    print("=" * 62)
+    if report.opportunities:
+        print(f"  🔎 {len(report.opportunities)} oportunidades VIVAS:")
+        for o in report.opportunities:
+            print(f"    ${o.reward_usd:>6.0f} {o.token:5} [{o.source}] {o.title[:44]}")
+            print(f"             vence {o.deadline[:10]} · {o.url}")
+    else:
+        print("  (sin oportunidades vivas ahora mismo — los bounties rotan,")
+        print("   vuelve a escanear más tarde)")
+    if report.errors:
+        print("  ⚠️  errores por fuente:")
+        for src, err in report.errors.items():
+            print(f"     {src}: {err[:120]}")
+    print("=" * 62)
+    return 0
+
+
 def _cmd_serve(port: int, price: str, network: str) -> int:
     """Run the x402 paid service (the agent sells an HTTP API for USDC)."""
     from vital.real.config import load_real_config
@@ -326,6 +354,8 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("work", help="El agente elige un bounty (vía LLM) y envía su trabajo")
 
+    sub.add_parser("scan", help="Escanea trabajo pagado EN VIVO en las fuentes conectadas")
+
     p_serve = sub.add_parser("serve", help="Servicio x402: vende una API y cobra USDC")
     p_serve.add_argument("--port", type=int, default=8402)
     p_serve.add_argument("--price", type=str, default="0.001", help="USDC por request")
@@ -351,6 +381,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_bounties(agent_only=not args.all)
     if args.command == "work":
         return _cmd_work()
+    if args.command == "scan":
+        return _cmd_scan()
     if args.command == "serve":
         return _cmd_serve(args.port, args.price, args.network)
     # default: tui

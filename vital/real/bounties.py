@@ -83,17 +83,37 @@ class SuperteamProvider:
             return {"error": str(exc)}
 
     def list_bounties(self, agent_only: bool = True) -> list[Bounty]:
-        """Fetch open bounties. If agent_only, keep AGENT_ALLOWED/AGENT_ONLY."""
+        """Fetch open bounties. If agent_only, keep AGENT_ALLOWED/AGENT_ONLY.
+
+        Uses the official agent endpoint /api/agents/listings/live when an
+        api_key is available (returns agent-eligible listings by default);
+        falls back to the public /api/listings otherwise.
+        """
         if self.demo:
             return self._demo_bounties()
-        try:
-            resp = self._client().get(f"{BASE_URL}/listings", params={"type": "bounty"})
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception:
-            return []
 
-        listings = data if isinstance(data, list) else data.get("listings", data.get("bounties", []))
+        listings = []
+        if self.api_key:
+            try:
+                resp = self._client().get(
+                    f"{BASE_URL}/agents/listings/live",
+                    params={"take": 50, "type": "bounty"},
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                listings = data if isinstance(data, list) else data.get("listings", [])
+            except Exception:
+                listings = []
+        if not listings:
+            try:
+                resp = self._client().get(f"{BASE_URL}/listings", params={"type": "bounty"})
+                resp.raise_for_status()
+                data = resp.json()
+                listings = data if isinstance(data, list) else data.get("listings", data.get("bounties", []))
+            except Exception:
+                return []
+
         out: list[Bounty] = []
         for item in listings:
             if not isinstance(item, dict):
@@ -114,12 +134,34 @@ class SuperteamProvider:
                     reward_usd=reward,
                     token=str(item.get("token", "USDC")),
                     agent_allowed=allowed,
-                    url=str(item.get("link") or item.get("url") or ""),
+                    url=str(item.get("link") or item.get("url") or item.get("slug") or ""),
                     description=str(item.get("description", ""))[:500],
                     skills=list(item.get("skills", []) or []),
                 )
             )
         return out
+
+    def details(self, slug: str) -> dict:
+        """Fetch full listing details by slug.
+
+        Tries the authenticated agent endpoint first, then the public one.
+        """
+        if self.demo:
+            return {"slug": slug, "demo": True}
+        headers = (
+            {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+        )
+        for url in (
+            f"{BASE_URL}/agents/listings/details/{slug}",
+            f"{BASE_URL}/listings/details/{slug}",
+        ):
+            try:
+                resp = self._client().get(url, headers=headers)
+                if resp.status_code == 200:
+                    return resp.json()
+            except Exception:
+                continue
+        return {"error": f"no details found for slug {slug!r}"}
 
     def submit(self, bounty_id: str, submission: dict) -> dict:
         """Submit work for a bounty. Requires a registered api_key."""
